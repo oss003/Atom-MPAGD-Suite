@@ -1,0 +1,15 @@
+File	Address		Diskimage
+---------------------------------------------
+Screen 	0016-1815  -> 	0300-1aff	SCR
+Menu  	0016-0715  -> 	1b00-21ff	COD1
+Menu	0816-end   ->   2200-end	COD2
+
+
+Catalog:
+---------------------------------------------
+Change fileinitials
+Change length COD2 in catalog
+
+RUN:
+---------------------------------------------
+On sector 2 change fileinitials

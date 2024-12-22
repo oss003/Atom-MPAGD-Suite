@@ -1,0 +1,8 @@
+MPAGD:
+- AGDx mini
+- CovertAGDXmini
+- Waterblocks
+- MireMare
+- APJ editor
+- Games
+
