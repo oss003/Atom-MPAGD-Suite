@@ -447,9 +447,8 @@ grav_skip:
 	adc #1
 	beq ogrv	;        jp z,ogrv           ; set to 255, use old gravity.
 	sta (z80_ix),y	;        ld (ix+13),a        ; write new setting.
-
-	ror a		;        rra                 ; every other frame.
-	bcc grav0	;        jr nc,grav0         ; don't apply gravity this time.
+	lsr a		;        rra                 ; every other frame.
+	bcs grav0	;        jr nc,grav0         ; don't apply gravity this time.
 	ldy #14		;        ld a,(ix+14)        ; pixels to move.
 	lda (z80_ix),y
 	cmp #16		;        cp 16               ; reached maximum?
@@ -495,13 +494,14 @@ gravu0:	jsr cangu	; gravu0 call cangu          ; can we go up?
 	dec z80_b	;        djnz gravu0
 	bne gravu0
 	rts		;        ret
-gravst:	ldy #14
+gravst:	ldy #14		; gravst ld a,(ix+14)        ; jump pointer high.
+	lda (z80_ix),y
+	pha
 	lda #0
 	sta (z80_ix),y	;        ld (ix+14),0        ; store new speed.
 	dey
 	sta (z80_ix),y	;        ld (ix+13),0        ; reset falling flag.
-	iny		; gravst ld a,(ix+14)        ; jump pointer high.
-	lda (z80_ix),y
+	pla
 	cmp #8		;        cp 8                ; was speed the maximum?
 evftf:	bne :+
 	jmp evnt15	; evftf  jp z,evnt15         ; yes, fallen too far.
@@ -527,7 +527,8 @@ ogrv:
 	dex		;        dec hl              ; go back to previous value.
 	lda jtab,x	;        ld a,(hl)           ; fetch that from table.
 	jmp ogrv1	;        jr ogrv1
-ogrv0:	pha
+ogrv0:
+	pha
 	ldy #14		; ogrv0  inc (ix+14)         ; point to next table entry.
 	lda (z80_ix),y
 	clc
@@ -535,7 +536,7 @@ ogrv0:	pha
 	sta (z80_ix),y
 	pla
 ogrv1:			; ogrv1  and a               ; any movement required?
-	beq ogrvex
+	beq ogrvex      ;	 ret z               ; no, not this time.
 	cmp #128	;        cp 128              ; is it up or down?
 	bcs ogrvu	;        jr nc,ogrvu         ; it's up.
 ogrvd:	sta z80_b	; ogrvd  ld b,a              ; set pixels to move.
@@ -583,12 +584,12 @@ ogrvst:	ldy #14		; ogrvst ld e,(ix+14)        ; get index to table.
 :
 	rts		;        ret
 
-ogrv2:			; ogrv2  ld hl,jtab          ; jump table.
+ogrv2:	ldx #0		; ogrv2  ld hl,jtab          ; jump table.
 	lda #0		;        ld b,0              ; offset into table.
 	sta z80_b
 ogrv4:	lda jtab,x	; ogrv4  ld a,(hl)           ; fetch table byte.
 	cmp #100	;        cp 100              ; hit end or downward move?
-	bmi ogrv3	;        jr c,ogrv3          ; yes.
+	bcc ogrv3	;        jr c,ogrv3          ; yes.
 	inx		;        inc hl              ; next byte of table.
 	inc z80_b	;        inc b               ; next offset.
 	jmp ogrv4	;        jr ogrv4            ; keep going until we find crest/end of table.
@@ -653,7 +654,7 @@ tfall:	ldy #13		; tfall  ld a,(ix+13)        ; jump pointer flag.
 			;        and a               ; is it set?
 	bne :+
 	rts		;        ret z               ; no.
-:	lda #1
+:	lda #255
 	sta (z80_ix),y	;        ld (ix+13),255      ; we're using the table.
 	jmp ogrv2	;        jr ogrv2            ; find position in table.
 
@@ -5255,7 +5256,7 @@ lrlchkx:
 ;--------------------------------------------------------------
 
 always:
-	lda #255		; report it as okay.
+	lda #0		; report it as okay.
 	rts
 
 lrchkx:
@@ -5595,7 +5596,7 @@ tstbl:
 ;  IX = sprite address
 ;-------------------------------------------------------------------
 
-jump:	eor #$ff	; jump   neg                 ; switch sign so we jump up.
+jump: 	eor #$ff	; jump   neg                 ; switch sign so we jump up.
 	clc
 	adc #1
 	sta z80_c	;        ld c,a              ; store in c register.
