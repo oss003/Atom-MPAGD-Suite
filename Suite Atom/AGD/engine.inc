@@ -1,12 +1,16 @@
 ;--------------------------------------------------------------
 ; Arcade Game Designer.
 ; (C) 2008 Jonathan Cauldwell.
-; ZX Spectrum Next Engine v0.10
-; Acorn Atom port by K.v.Oss v0.99 2018-2022
-;
-; v1.00 - JUMP/FALL changed to AGD and MPAGD behaviour
-; v1.01 - Added HIDEBLOCK type
-
+; ZX Spectrum Next Engine v0.7.10
+; Acorn Atom port by K.v.Oss 2018-2022
+;  v0.7.10-  ; Initial version
+;  v0.7.10a  ; clwflag, CLW code
+;  v0.7.10b  ; bigflag, Bigtext code
+;  v0.7.10c  ; crflag, Crumbling blocks
+;  v0.7.10d  ; xflag, Metablocks (16x16)
+;  v0.7.10e  ; rflag, RAM Pre-Shifted Tables
+;  v0.7.10f  ; Added HIDEBLOCK type
+;  v0.7.10g  ; Fixed sprite bug
 ;--------------------------------------------------------------
 
 ; Conditional compilation flags
@@ -1331,7 +1335,7 @@ dspr4:
 	lda (z80_ix),y 		; old frame.
 	ldy #7
 	cmp (z80_ix),y 		; compare against new value.
-	jmp dspr7 		; they differ, need to redraw.
+	bne dspr7 		; they differ, need to redraw.
 
 	ldy #1
 	lda (z80_ix),y 		; old image.
