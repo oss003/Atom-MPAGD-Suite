@@ -6,6 +6,8 @@
 /*   v1.00 JUMP/FALL MPAGD, TABLEJUMP/TABLEFALL like AGD bahaviour */
 /*   v1.01 Added HIDEBLOCK type                                    */
 /*   v1.02 Fixed bigsprites bug                                    */
+/*   v1.03 Fixed rflag bug                                         */
+/*   v1.04 Fixed AT variable bug                                   */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3939,8 +3941,8 @@ void CR_At( void )
 	{
 		nArg1 = GetNum( 8 );								/* store first argument. */
 		nArg2 = NextKeyword();								/* get second argument. */
-//		if ( nArg2 == INS_NUM )								/* second argument is numeric too. */
-//		{
+		if ( nArg2 == INS_NUM )								/* second argument is numeric too. */
+		{
 //			nArg2 = 256 * GetNum( 8 ) + nArg1;	/* pass both parameters as 16-bit argument. */
 			nArg2 = GetNum( 8 );
 			WriteInstruction( "lda #" );
@@ -3950,14 +3952,16 @@ void CR_At( void )
 			WriteInstruction( "lda #" );
 			WriteNumber( nArg2 );
 			WriteInstruction( "sta charx");
-//		}
-//		else
-//		{
-//			WriteInstruction( "ld l," );
-//			WriteNumber( nArg1 );
-//			CompileKnownArgument( nArg2 );					/* puts argument into accumulator. */
-//			WriteInstruction( "ld h,a" );					/* put that into h. */
-//		}
+		}
+		else
+		{
+			WriteInstruction( "lda #" );
+			WriteNumber( nArg1 );
+			WriteText ( "		; AT" );
+			WriteInstruction( "sta chary");
+			CompileKnownArgument( nArg2 );						/* puts first argument into accumulator. */
+			WriteInstruction( "sta charx");
+		}
 	}
 	else
 	{
