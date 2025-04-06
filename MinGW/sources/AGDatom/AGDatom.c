@@ -8,6 +8,8 @@
 /*   v1.02 Fixed bigsprites bug                                    */
 /*   v1.03 Fixed rflag bug                                         */
 /*   v1.04 Fixed AT variable bug                                   */
+/*   v1.05 Fixed TICKER var                                        */
+/*   v1.06 Ladderflag set when LADDERBLOCK is defined              */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1573,6 +1575,9 @@ void CreateBlocks( void )
 		WriteText( "\n        .byte " );						/* start of text message */
 		nData = 0;
 		cType[ nCounter ] = *cSrc++;						/* store type in array */
+
+		if (cType[nCounter] == 3) nLadder=1;
+
 		while ( nData++ < 7 )
 		{
 			WriteNumber( *cSrc++ );							/* write byte of data */
@@ -3466,7 +3471,7 @@ void CR_AnimBack( void )
 	}
 	else
 	{
-		WriteInstruction( "lda #," );
+		WriteInstruction( "lda #" );
 		WriteNumber( nArg );								/* first argument in c register. */
 		WriteText ( "		; ANIMATEBACK" );
 	}
@@ -4753,9 +4758,11 @@ void CR_Ticker( void )
 {
 	unsigned short int nArg1 = NextKeyword();
 	unsigned short int nArg2;
+	unsigned char *cSrc;									/* source pointer. */
 
 	if ( nArg1 == INS_NUM )									/* first argument is numeric. */
 	{
+		cSrc = cBufPos;										/* store position in buffer. */
 		nArg1 = GetNum( 8 );								/* store first argument. */
 		if ( nArg1 == 0 )
 		{
@@ -4783,16 +4790,22 @@ void CR_Ticker( void )
 				{
 					nArg2 = GetNum( 8 );
 					WriteInstruction( "lda #" );
-					WriteNumber( nArg2 );					/* pass both parameters as 16-bit argument. */
+					WriteNumber( nArg1 );					/* pass both parameters as 16-bit argument. */
 					WriteInstruction( "sta z80_c" );
 					WriteInstruction( "lda #" );
-					WriteNumber( nArg1 );						/* pass both parameters as 16-bit argument. */
+					WriteNumber( nArg2 );						/* pass both parameters as 16-bit argument. */
 					WriteInstruction( "sta z80_b" );
 					WriteInstruction( "jsr iscrly" );
 				}
 				else
 				{
-					Error( "Invalid argument for TICKER" );
+//					Error( "Invalid argument for TICKER" );
+					cBufPos = cSrc;
+					CompileArgument();									/* puts first argument into accumulator. */
+					WriteInstruction( "sta z80_c" );						/* copy into b register. */
+					CompileArgument();									/* puts second argument into accumulator. */
+					WriteInstruction( "sta z80_b" );						/* put that into c. */
+					WriteInstruction( "jsr iscrly" );
 				}
 			}
 		}

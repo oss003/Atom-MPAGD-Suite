@@ -50,7 +50,7 @@
 ;                  part2 $0B00-$8000
 ;----------------------------------------------------------------
 
-dosversion	= 0
+dosversion	= 1
 ;bigflag    	= 1
 ;crflag    	= 0
 kflag		= 0
@@ -209,21 +209,46 @@ clrloop:
 	inx
 	bne clrloop
 
-	lda #$e0		; T1 continuous
-	sta $b80b
-	lda #$7f		; No int
-	sta $b80e
-	lda #0
-	sta $b80d		; Clear interrupt flags
-	lda #<40000
+; Set new interrupt routine
+
+	lda #<irq_handler	; New interrupt handler	
+	sta $204
+	lda #>irq_handler
+	sta $205
+
+	lda #<20000		; Interrupt at 25Hz
 	sta Timer1_Low
-	lda #>40000
+	lda #>20000
 	sta Timer1_High
+	lda #$40
+	sta $b80b
+	lda #$c0
+	sta $b80e
+	cli
 
 	jsr game	 	; start the game.
 	lda #12			; Clear screen + exit to Basic
 	jsr OSWRCH
 	jmp $C2B2		; Back to Basic
+
+irq_handler:
+	lda Timer1_Low		; Reset irqflag
+
+	txa			; Save x,y
+	pha
+	tya
+	pha
+
+	inc frames_passed	; Nr of frames past
+
+	pla			; Restore x,y,a
+	tay
+	pla
+	tax
+	pla
+	rti
+
+frames_passed:	.byte 0
 
 ;------------------------------------------------------------------
 ; Sprite table 
@@ -452,7 +477,7 @@ grav_skip:
 	beq ogrv	;        jp z,ogrv           ; set to 255, use old gravity.
 	sta (z80_ix),y	;        ld (ix+13),a        ; write new setting.
 	lsr a		;        rra                 ; every other frame.
-	bcs grav0	;        jr nc,grav0         ; don't apply gravity this time.
+	bcc grav0
 	ldy #14		;        ld a,(ix+14)        ; pixels to move.
 	lda (z80_ix),y
 	cmp #16		;        cp 16               ; reached maximum?
@@ -1501,6 +1526,19 @@ nexlin:
 	sta dispy
 	rts
 
+wintop:		.byte WINDOWTOP	; top of window.
+winlft:		.byte WINDOWLFT	; left edge.
+winhgt:		.byte WINDOWHGT	; window height.
+winwid:		.byte WINDOWWID	; window width.
+numob:		.byte NUMOBJ	; number of objects in game.
+
+.if dosversion
+.repeat 256
+  .byte 0
+.endrep
+.endif
+
+
 ;----------------------------------------------------
 ; Delay routine 1/50 sec
 ;
@@ -1547,43 +1585,6 @@ txtcol:		.byte green,yellow,blue,red
 ; Don't change the order of these four.  
 ; Menu routine relies on winlft following wintop.
 
-wintop:		.byte WINDOWTOP	; top of window.
-winlft:		.byte WINDOWLFT	; left edge.
-winhgt:		.byte WINDOWHGT	; window height.
-winwid:		.byte WINDOWWID	; window width.
-numob:		.byte NUMOBJ	; number of objects in game.
-
-.if dosversion
-;  .SEGMENT "PART2"
-;  .org $0b00
-;.endif
-.repeat 256
-  .byte 0
-.endrep
-.endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 tmpscr:		.byte 0
 sndtyp:		.byte 0
 colpatt:	.byte 0
@@ -1601,6 +1602,8 @@ prsloop:
 	cpy #255
 	beq prsloop		; wait until key pressed
 	jsr joykey
+lda joyval
+sta varopt
 	pla
 	tay
 	rts
@@ -2238,11 +2241,18 @@ vsync:
 	pha
 	jsr joykey		; read joystick/keyboard.
 
-	lda #$40		; Set Timer1 expired bit
+; Sync framerate to 25 Hz
+
 vsync1:
-	bit $b80d		; Check Interrupt Flag Register
-	beq vsync1
-	lda Timer1_Low		; Clear Timer interrupt
+	lda frames_passed	; Wait if not at 25Hz
+	cmp #2
+	bcc vsync1
+
+	lda #0			; sync framerate 25 Hz
+	sta frames_passed
+
+
+; Update shrapnell
 
 	lda clock
 	and #1
@@ -2400,7 +2410,7 @@ fdchk:
 	sta dispy
 
 	lda #0 			; block to write.
-	jsr pattr 		; write block.
+	jsr pattr		; write block.
 
 	pla
 	sta dispy
@@ -5374,7 +5384,10 @@ gtblk:
 	rol bufaddr+1
 	lda bufaddr+1
 	sta dispy
- 
+;.if aflag
+;	lda #0
+;	jsr wbloc
+;.endif
 	lda colpatt		; get blocknr
 	sta z80_e		; displacement in e.
 	lda #0
